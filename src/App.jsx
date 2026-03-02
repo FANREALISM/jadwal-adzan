@@ -94,6 +94,21 @@ const App = () => {
         adzanAudio.current.play().catch(() => console.log("Menunggu interaksi user untuk audio"));
     }
   };
+  const triggerDemo = () => {
+    const testName = "Demo Adzan";
+    if (Notification.permission === "granted") {
+      new Notification("Tes Notifikasi Berhasil", {
+        body: "Ini adalah contoh tampilan notifikasi adzan Anda.",
+        icon: '/logo192.png',
+        tag: 'adzan-demo' // Mencegah penumpukan notifikasi
+      });
+    } else {
+      alert("Izinkan notifikasi terlebih dahulu melalui tombol slide.");
+    }
+    if (adzanAudio.current) {
+      adzanAudio.current.play().catch(() => alert("Interaksi user diperlukan untuk suara. Klik layar dahulu."));
+    }
+  };
 
   // --- FUNGSI TOGGLE NOTIFIKASI (FIXED FOR VERCEL) ---
   const toggleNotification = async (e) => {
@@ -226,7 +241,20 @@ const App = () => {
                   </button>
                 </div>
               </div>
-
+              <div className="flex flex-col items-center gap-3">
+      <div className="flex items-center gap-3">
+         {/* Toggle Switch Anda yang sudah ada */}
+         {/* ... */}
+      </div>
+      
+      {/* TOMBOL DEMO BARU */}
+      <button 
+        onClick={triggerDemo}
+        className="text-[9px] font-bold text-emerald-500/60 uppercase tracking-[0.2em] hover:text-emerald-400 transition-colors py-1 px-3 border border-emerald-500/20 rounded-lg"
+      >
+        ⚡ Tes Notifikasi & Suara
+      </button>
+    </div>
               <h2 className="text-7xl font-mono font-black text-white tracking-tighter mb-8 italic">{currentTime.toLocaleTimeString('en-GB', { hour12: false })}</h2>
               
               <div className={`inline-flex flex-col items-center gap-1 px-10 py-5 rounded-[2rem] border transition-all ${nextPrayer.isUrgent ? 'bg-emerald-500 border-emerald-400 animate-pulse' : 'bg-slate-800/50 border-slate-700'}`}>
