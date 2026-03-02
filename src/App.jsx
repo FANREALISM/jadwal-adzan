@@ -58,7 +58,7 @@ const App = () => {
     adzanAudio.current = new Audio('/adzan.mp3');
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     
-    // Cek status izin notifikasi saat ini
+    // Cek status izin saat ini di browser
     if ("Notification" in window && Notification.permission === "granted") {
       setIsNotifyEnabled(true);
     }
@@ -90,27 +90,34 @@ const App = () => {
         icon: '/logo192.png'
       });
     }
-    adzanAudio.current.play().catch(() => console.log("Menunggu interaksi user untuk audio"));
+    if (adzanAudio.current) {
+        adzanAudio.current.play().catch(() => console.log("Menunggu interaksi user untuk audio"));
+    }
   };
 
-  // Fungsi Toggle Notifikasi
-  const toggleNotification = async () => {
+  // --- FUNGSI TOGGLE NOTIFIKASI (FIXED FOR VERCEL) ---
+  const toggleNotification = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     if (!isNotifyEnabled) {
       if ("Notification" in window) {
         const permission = await Notification.requestPermission();
         if (permission === "granted") {
           setIsNotifyEnabled(true);
-          new Notification("Notifikasi Aktif", { body: "Adzan Pro akan memberi tahu Anda tepat waktu." });
+          new Notification("Adzan Pro", { body: "Notifikasi Berhasil Diaktifkan!" });
         } else {
-          alert("Izin notifikasi ditolak oleh browser.");
+          alert("Silakan aktifkan izin notifikasi di pengaturan browser Anda.");
         }
+      } else {
+        alert("Browser tidak mendukung notifikasi.");
       }
     } else {
       setIsNotifyEnabled(false);
     }
   };
 
-  // 3. Auth & Sinkronisasi Data Otomatis
+  // 3. Auth & Sinkronisasi Data
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
@@ -187,7 +194,7 @@ const App = () => {
         <div className="w-full max-w-lg animate-in slide-in-from-bottom-10 duration-1000">
           <header className="flex justify-between items-center mb-8 px-2">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold">{session.user.email[0].toUpperCase()}</div>
+              <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold">{session.user.email ? session.user.email[0].toUpperCase() : 'U'}</div>
               <div><p className="text-[10px] text-slate-500 font-bold uppercase">Wilayah</p><p className="text-sm font-black text-white">{locationName}</p></div>
             </div>
             <button onClick={() => supabase.auth.signOut()} className="text-red-500 text-[10px] font-black uppercase tracking-widest bg-red-500/5 px-4 py-2 rounded-xl border border-red-500/10">Logout</button>
@@ -195,8 +202,9 @@ const App = () => {
 
           <section className={`relative overflow-hidden border rounded-[3rem] p-10 mb-8 transition-all duration-700 shadow-2xl ${nextPrayer.isUrgent ? 'bg-emerald-950/40 border-emerald-500 shadow-emerald-500/20' : 'bg-slate-900 border-slate-800'}`}>
              <div className="relative z-10 text-center">
+              
               {/* HEADER WIDGET DENGAN TOGGLE SLIDE */}
-              <div className="flex justify-between items-center mb-6 px-2">
+              <div className="flex justify-between items-center mb-6 px-2 relative z-50">
                 <div className="px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
                   <span className="text-[11px] font-black text-emerald-400 uppercase tracking-widest">
                     {hijriDate ? `${hijriDate.day} ${hijriDate.month} ${hijriDate.year} H` : "SINKRONISASI..."}
@@ -205,14 +213,16 @@ const App = () => {
                 
                 {/* TOGGLE SWITCH COMPONENT */}
                 <div className="flex items-center gap-3">
-                  <span className={`text-[10px] font-black uppercase tracking-tighter ${isNotifyEnabled ? 'text-emerald-400' : 'text-slate-600'}`}>
+                  <span className={`text-[10px] font-black uppercase tracking-tighter transition-colors ${isNotifyEnabled ? 'text-emerald-400' : 'text-slate-600'}`}>
                     {isNotifyEnabled ? 'Adzan On' : 'Adzan Off'}
                   </span>
                   <button 
+                    type="button"
                     onClick={toggleNotification}
-                    className={`relative w-12 h-6 rounded-full transition-colors duration-300 focus:outline-none ${isNotifyEnabled ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                    className={`relative w-12 h-6 rounded-full transition-all duration-300 focus:outline-none shadow-inner ${isNotifyEnabled ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                    style={{ touchAction: 'manipulation' }}
                   >
-                    <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform duration-300 transform ${isNotifyEnabled ? 'translate-x-6' : 'translate-x-0'}`} />
+                    <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform duration-300 shadow-sm transform ${isNotifyEnabled ? 'translate-x-6' : 'translate-x-0'}`} />
                   </button>
                 </div>
               </div>
