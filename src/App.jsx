@@ -36,7 +36,54 @@ const PrayerCard = ({ name, time, isActive }) => {
     </div>
   );
 };
+// Tambahkan fungsi pembantu ini di luar komponen App
+const urlBase64ToUint8Array = (base64String) => {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+};
 
+// Di dalam komponen App, perbarui fungsi toggleNotification
+const toggleNotification = async (e) => {
+  e.preventDefault();
+  
+  if (!isNotifyEnabled) {
+    const permission = await Notification.requestPermission();
+    if (permission === "granted") {
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        
+        // GANTI INI dengan Public Key Anda
+        const publicKey = "BDsKmN6dlmcPxSTIce7tUEdYpxlBtt2T3xXuHMTKFPs1ZViFywG7SScybsIoad3w-1ZVUuZXO3fxd3i5q4OROTI"; 
+        
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey)
+        });
+
+        // Simpan ke Supabase
+        const { error } = await supabase
+          .from('user_subscriptions')
+          .upsert({ 
+            user_id: session.user.id, 
+            subscription_json: subscription 
+          });
+
+        if (!error) setIsNotifyEnabled(true);
+      } catch (err) {
+        console.error("Gagal registrasi Push:", err);
+      }
+    }
+  } else {
+    setIsNotifyEnabled(false);
+    // Opsional: Hapus dari database jika ingin benar-benar berhenti
+  }
+};
 // --- KOMPONEN UTAMA ---
 const App = () => {
   const [session, setSession] = useState(null);
@@ -121,6 +168,30 @@ const App = () => {
     }
   };
 
+  const subscribeUser = async () => {
+  if ('serviceWorker' in navigator && 'PushManager' in window) {
+    const registration = await navigator.serviceWorker.ready;
+    
+    // Ganti dengan Public Key hasil generate tadi
+    const publicKey = 'YOUR_PUBLIC_VAPID_KEY'; 
+    
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: publicKey
+    });
+
+    // Simpan ke Supabase agar Backend bisa membacanya
+    const { error } = await supabase
+      .from('user_subscriptions')
+      .upsert({ 
+        user_id: session.user.id, 
+        subscription_json: JSON.stringify(subscription),
+        updated_at: new Date()
+      });
+
+    if (!error) console.log("User terdaftar untuk Push Notification");
+  }
+};
   // --- Auth & Data ---
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
