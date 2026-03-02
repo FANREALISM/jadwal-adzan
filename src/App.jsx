@@ -47,26 +47,19 @@ const App = () => {
   const [nextPrayer, setNextPrayer] = useState({ name: "-", countdown: "", isUrgent: false });
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [notifiedPrayers, setNotifiedPrayers] = useState([]);
-  
-  // State untuk Toggle Notifikasi
   const [isNotifyEnabled, setIsNotifyEnabled] = useState(false);
   
   const adzanAudio = useRef(null);
 
-  // 1. Inisialisasi Audio & Jam
   useEffect(() => {
     adzanAudio.current = new Audio('/adzan.mp3');
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    
-    // Cek status izin saat ini di browser
     if ("Notification" in window && Notification.permission === "granted") {
       setIsNotifyEnabled(true);
     }
-
     return () => clearInterval(timer);
   }, []);
 
-  // 2. Monitoring Waktu Adzan & Notifikasi
   useEffect(() => {
     if (schedule && isNotifyEnabled) {
       const timeStr = currentTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
@@ -78,7 +71,6 @@ const App = () => {
           setNotifiedPrayers(prev => [...prev, key]);
         }
       });
-
       if (timeStr === "00:00") setNotifiedPrayers([]); 
     }
   }, [currentTime, schedule, notifiedPrayers, isNotifyEnabled]);
@@ -91,30 +83,29 @@ const App = () => {
       });
     }
     if (adzanAudio.current) {
-        adzanAudio.current.play().catch(() => console.log("Menunggu interaksi user untuk audio"));
+        adzanAudio.current.play().catch(() => console.log("Audio play blocked"));
     }
   };
+
+  // FUNGSI DEMO
   const triggerDemo = () => {
-    const testName = "Demo Adzan";
     if (Notification.permission === "granted") {
       new Notification("Tes Notifikasi Berhasil", {
         body: "Ini adalah contoh tampilan notifikasi adzan Anda.",
         icon: '/logo192.png',
-        tag: 'adzan-demo' // Mencegah penumpukan notifikasi
+        tag: 'adzan-demo'
       });
     } else {
       alert("Izinkan notifikasi terlebih dahulu melalui tombol slide.");
     }
     if (adzanAudio.current) {
-      adzanAudio.current.play().catch(() => alert("Interaksi user diperlukan untuk suara. Klik layar dahulu."));
+      adzanAudio.current.play().catch(() => alert("Klik layar sekali untuk mengizinkan suara."));
     }
   };
 
-  // --- FUNGSI TOGGLE NOTIFIKASI (FIXED FOR VERCEL) ---
   const toggleNotification = async (e) => {
     e.preventDefault();
     e.stopPropagation();
-
     if (!isNotifyEnabled) {
       if ("Notification" in window) {
         const permission = await Notification.requestPermission();
@@ -122,17 +113,15 @@ const App = () => {
           setIsNotifyEnabled(true);
           new Notification("Adzan Pro", { body: "Notifikasi Berhasil Diaktifkan!" });
         } else {
-          alert("Silakan aktifkan izin notifikasi di pengaturan browser Anda.");
+          alert("Silakan aktifkan izin di pengaturan browser.");
         }
-      } else {
-        alert("Browser tidak mendukung notifikasi.");
       }
     } else {
       setIsNotifyEnabled(false);
     }
   };
 
-  // 3. Auth & Sinkronisasi Data
+  // --- Auth & Data ---
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
@@ -147,17 +136,13 @@ const App = () => {
           fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=id`),
           fetch(`https://api.aladhan.com/v1/timings?latitude=${latitude}&longitude=${longitude}&method=11`)
         ]);
-
         const locData = await locRes.json();
         const prayData = await prayRes.json();
-
         setLocationName((locData.city || "BEKASI").toUpperCase());
-
         if (prayData?.data) {
           setSchedule(prayData.data.timings);
           const h = prayData.data.date?.hijri;
           if (h) setHijriDate({ day: h.day, month: h.month.en, year: h.year });
-
           const events = [
             { name: "Nuzulul Qur'an", date: "6 Mar 2026", hijri: "17 Ramadhan" },
             { name: "Lailatul Qadar", date: "9 Mar 2026", hijri: "21 Ramadhan" },
@@ -165,19 +150,17 @@ const App = () => {
           ].filter(e => new Date(e.date) >= new Date().setHours(0,0,0,0));
           setUpcomingEvents(events);
         }
-      } catch (err) { console.error("Sync Error:", err); }
+      } catch (err) { console.error(err); }
     });
   }, []);
 
   useEffect(() => { if (session) syncAllData(); }, [session, syncAllData]);
 
-  // 4. Kalkulasi Countdown
   useEffect(() => {
     if (schedule) {
       const prayers = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
       const now = new Date();
       let target = null, targetT = null;
-
       for (let p of prayers) {
         const [h, m] = schedule[p].split(':').map(Number);
         const pD = new Date(); pD.setHours(h, m, 0);
@@ -188,7 +171,6 @@ const App = () => {
         const [h, m] = schedule.Fajr.split(':').map(Number);
         targetT = new Date(); targetT.setDate(targetT.getDate() + 1); targetT.setHours(h, m, 0);
       }
-
       const diff = targetT - now;
       const hours = Math.floor(diff / 3600000);
       const mins = Math.floor((diff % 3600000) / 60000);
@@ -218,43 +200,39 @@ const App = () => {
           <section className={`relative overflow-hidden border rounded-[3rem] p-10 mb-8 transition-all duration-700 shadow-2xl ${nextPrayer.isUrgent ? 'bg-emerald-950/40 border-emerald-500 shadow-emerald-500/20' : 'bg-slate-900 border-slate-800'}`}>
              <div className="relative z-10 text-center">
               
-              {/* HEADER WIDGET DENGAN TOGGLE SLIDE */}
-              <div className="flex justify-between items-center mb-6 px-2 relative z-50">
+              <div className="flex justify-between items-start mb-6 px-2 relative z-50">
                 <div className="px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
                   <span className="text-[11px] font-black text-emerald-400 uppercase tracking-widest">
                     {hijriDate ? `${hijriDate.day} ${hijriDate.month} ${hijriDate.year} H` : "SINKRONISASI..."}
                   </span>
                 </div>
                 
-                {/* TOGGLE SWITCH COMPONENT */}
-                <div className="flex items-center gap-3">
-                  <span className={`text-[10px] font-black uppercase tracking-tighter transition-colors ${isNotifyEnabled ? 'text-emerald-400' : 'text-slate-600'}`}>
-                    {isNotifyEnabled ? 'Adzan On' : 'Adzan Off'}
-                  </span>
+                {/* BAGIAN TOGGLE & DEMO YANG SUDAH DIRAPIKAN */}
+                <div className="flex flex-col items-end gap-2">
+                  <div className="flex items-center gap-3">
+                    <span className={`text-[10px] font-black uppercase tracking-tighter ${isNotifyEnabled ? 'text-emerald-400' : 'text-slate-600'}`}>
+                      {isNotifyEnabled ? 'Adzan On' : 'Adzan Off'}
+                    </span>
+                    <button 
+                      type="button"
+                      onClick={toggleNotification}
+                      className={`relative w-12 h-6 rounded-full transition-all duration-300 shadow-inner ${isNotifyEnabled ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                      style={{ touchAction: 'manipulation' }}
+                    >
+                      <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform duration-300 shadow-sm transform ${isNotifyEnabled ? 'translate-x-6' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+                  
+                  {/* TOMBOL DEMO */}
                   <button 
-                    type="button"
-                    onClick={toggleNotification}
-                    className={`relative w-12 h-6 rounded-full transition-all duration-300 focus:outline-none shadow-inner ${isNotifyEnabled ? 'bg-emerald-500' : 'bg-slate-700'}`}
-                    style={{ touchAction: 'manipulation' }}
+                    onClick={triggerDemo}
+                    className="text-[9px] font-black text-emerald-500/40 uppercase tracking-widest hover:text-emerald-400 transition-colors"
                   >
-                    <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform duration-300 shadow-sm transform ${isNotifyEnabled ? 'translate-x-6' : 'translate-x-0'}`} />
+                    ⚡ Tes Notif
                   </button>
                 </div>
               </div>
-              <div className="flex flex-col items-center gap-3">
-      <div className="flex items-center gap-3">
-         {/* Toggle Switch Anda yang sudah ada */}
-         {/* ... */}
-      </div>
-      
-      {/* TOMBOL DEMO BARU */}
-      <button 
-        onClick={triggerDemo}
-        className="text-[9px] font-bold text-emerald-500/60 uppercase tracking-[0.2em] hover:text-emerald-400 transition-colors py-1 px-3 border border-emerald-500/20 rounded-lg"
-      >
-        ⚡ Tes Notifikasi & Suara
-      </button>
-    </div>
+
               <h2 className="text-7xl font-mono font-black text-white tracking-tighter mb-8 italic">{currentTime.toLocaleTimeString('en-GB', { hour12: false })}</h2>
               
               <div className={`inline-flex flex-col items-center gap-1 px-10 py-5 rounded-[2rem] border transition-all ${nextPrayer.isUrgent ? 'bg-emerald-500 border-emerald-400 animate-pulse' : 'bg-slate-800/50 border-slate-700'}`}>
