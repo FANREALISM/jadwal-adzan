@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from './firebase-config';
+import { Analytics } from '@vercel/analytics/react';
 
 // --- KOMPONEN KARTU JADWAL DENGAN EFEK RIPPLE ---
 const PrayerCard = ({ name, time, isActive }) => {
@@ -334,6 +335,7 @@ const App = () => {
           </div>
         </div>
       )}
+      <Analytics />
     </div>
   );
 };
